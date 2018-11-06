@@ -1,8 +1,8 @@
 import React from 'react';
-import { Loader } from 'semantic-ui-react';
+import { BookLoader } from 'common/components';
 
 function ApiLoader(props) {
-  return <Loader active size="huge" inline="centered" />;
+  return <BookLoader />;
 }
 
 export function withLoader(WrappedComponent) {
