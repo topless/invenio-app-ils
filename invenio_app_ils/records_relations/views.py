@@ -21,6 +21,7 @@ from invenio_app_ils.permissions import need_permissions
 from invenio_app_ils.pidstore.pids import SERIES_PID_TYPE
 from invenio_app_ils.records.api import IlsRecord
 from invenio_app_ils.records_relations.indexer import RecordRelationIndexer
+from invenio_app_ils.records_relations.loaders import relations_sequence_loader
 from invenio_app_ils.relations.api import Relation
 
 from invenio_app_ils.records_relations.api import (  # isort:skip
@@ -409,6 +410,194 @@ class RecordRelationsResource(ContentNegotiatedMethodView):
 
         for action in actions:
             record = delete(action)
+
+        # Index both parent/child (or first/second)
+        RecordRelationIndexer().index(record, *records_to_index)
+
+        return self.make_response(record.pid, record, 200)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ NEW VIEWS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+def create_relations_sequence_blueprint(app):
+    """Create relations sequence blueprint."""
+    # NOTE: Relation Sequence is only available for Series
+    blueprint = Blueprint(
+        "invenio_app_ils_relations_sequence",
+        __name__,
+        url_prefix=""
+    )
+
+    endpoints = app.config.get("RECORDS_REST_ENDPOINTS", [])
+    options = endpoints.get(SERIES_PID_TYPE, {})
+    default_media_type = options.get("default_media_type", "")
+    rec_serializers = options.get("record_serializers", {})
+    serializers = {
+        mime: obj_or_import_string(func)
+        for mime, func in rec_serializers.items()
+    }
+
+    blueprint.add_url_rule(
+        "{0}/relations/sequence".format(options["item_route"]),
+        view_func=RelationSequenceResource.as_view(
+            RelationSequenceResource.view_name,
+            serializers=serializers,
+            default_media_type=default_media_type,
+            ctx=dict(loader=relations_sequence_loader),
+        ),
+        methods=["POST", "DELETE"],
+    )
+    return blueprint
+
+
+class RelationSequenceResource(ContentNegotiatedMethodView):
+    """Relation Sequence views for a record."""
+    view_name = "{}_relations_sequence"
+
+    def _validate_relation(self, record, payload):
+        """Validate the payload when creating a new sequence relation."""
+        # FIXME: loader will take care of this validation
+        try:
+            next_pid = payload.pop("next_pid")
+            next_pid_type = payload.pop("next_pid_type")
+            previous_pid = payload.pop("previous_pid")
+            previous_pid_type = payload.pop("previous_pid_type")
+        except KeyError as key:
+            raise RecordRelationsError(
+                "The `{}` is a required field".format(key)
+            )
+
+        if record["pid"] != next_pid and record["pid"] != previous_pid:
+            raise RecordRelationsError(
+                "Cannot create a relation for other record than one with PID "
+                "`{}`".format(record["pid"])
+            )
+
+        if next_pid == previous_pid:
+            raise RecordRelationsError(
+                "Cannot create a sequence with the same next PID `{}`"
+                "and previous PID `{}`".format(next_pid, previous_pid)
+            )
+
+        return next_pid, next_pid_type, previous_pid, previous_pid_type, \
+            payload
+
+    def _create_relation(self, record, payload):
+        """Create a Sequence relation.
+
+        Expected payload:
+
+            {
+                next_pid: <pid_value>,
+                next_pid_type: <pid_type>,
+                previous_pid: <pid_value>,
+                previous_pid_type: <pid_type>,
+            }
+        """
+        next_pid, next_pid_type, previous_pid, previous_pid_type, metadata = \
+            self._validate_relation(record, payload)
+
+        next_rec = IlsRecord.get_record_by_pid(
+            next_pid, pid_type=next_pid_type)
+
+        previous_rec = IlsRecord.get_record_by_pid(
+            previous_pid, pid_type=previous_pid_type)
+
+        relation_sequence = RecordRelationsSequence()
+        mod_prev, mod_next = relation_sequence.add(
+            previous_rec=previous_rec,
+            next_rec=next_rec,
+            **metadata
+        )
+        return [mod_prev, mod_next], previous_rec, next_rec
+
+    def _delete_relation(self, record, relation_type, payload):
+        """Delete sequence relation.
+
+        Expected payload:
+
+            {
+                next_pid: <pid_value>,
+                next_pid_type: <pid_type>,
+                previous_pid: <pid_value>,
+                previous_pid_type: <pid_type>,
+            }
+        """
+        next_pid, next_pid_type, prev_pid, prev_pid_type, metadata = \
+            self._validate_sequence_creation_payload(record, payload)
+
+        next_rec = IlsRecord.get_record_by_pid(
+            next_pid, pid_type=next_pid_type)
+
+        previous_rec = IlsRecord.get_record_by_pid(
+            prev_pid, pid_type=prev_pid_type)
+
+        relation_sequence = RecordRelationsSequence()
+        mod_prev, mod_next = relation_sequence.remove(
+            previous_rec=previous_rec,
+            next_rec=next_rec,
+        )
+        return mod_prev, mod_prev, mod_next
+
+    @pass_record
+    @need_permissions("relations-create")
+    def post(self, record, **kwargs):
+        """Create a new relation sequence."""
+        def create(payload):
+            modified, first, second = self._create_relation(record, payload)
+            db.session.commit()
+
+            records_to_index.append(first)
+            records_to_index.append(second)
+
+            def is_modified(x, r):
+                return (x.pid == r.pid and x._pid_type == r._pid_type)
+
+            # NOTE: modified can be a record or a list of records, if one
+            # matches our record return the modified one.
+            # FIXME: Since we are moving in different views we can return
+            # custom modified record responses.
+            if isinstance(modified, list):
+                for mod_record in modified:
+                    if is_modified(mod_record, record):
+                        return mod_record
+
+            _modified = modified if isinstance(modified, list) else [modified]
+
+            for mod_record in _modified:
+                if is_modified(mod_record, record):
+                    return mod_record
+            return record
+
+        records_to_index = []
+        payload = self.loader()
+        record = create(payload)
+
+        # Index both parent/child (or first/second)
+        RecordRelationIndexer().index(record, *records_to_index)
+        return self.make_response(record.pid, record, 201)
+
+    @pass_record
+    @need_permissions("relations-delete")
+    def delete(self, record, **kwargs):
+        """Delete an existing relation sequence."""
+        def delete(payload):
+            modified, first, second = self._delete_relation(record, payload)
+            db.session.commit()
+
+            records_to_index.append(first)
+            records_to_index.append(second)
+
+            # if the record is the modified, return the modified version
+            # NOTE: review  this one to return the modifled record
+            if modified.pid == record.pid and \
+               modified._pid_type == record._pid_type:
+                return modified
+            return record
+
+        records_to_index = []
+        payload = self.loader()
+        record = delete(payload)
 
         # Index both parent/child (or first/second)
         RecordRelationIndexer().index(record, *records_to_index)

@@ -148,6 +148,7 @@ setup(
             "ils_circulation = invenio_app_ils.circulation.views:create_circulation_blueprint",
             "ils_circulation_stats = invenio_app_ils.circulation.stats.views:create_circulation_stats_blueprint",
             "ils_relations = invenio_app_ils.records_relations.views:create_relations_blueprint",
+            "ils_relations_sequence = invenio_app_ils.records_relations.views:create_relations_sequence_blueprint",
             "ils_document_request = invenio_app_ils.document_requests.views:create_document_request_action_blueprint",
             "ils_document_stats = invenio_app_ils.records.views:create_document_stats_blueprint",
             "ils_files = invenio_app_ils.files.views:create_files_blueprint",
