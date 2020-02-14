@@ -54,10 +54,37 @@ def create_relations_blueprint(app):
             methods=["POST", "DELETE"],
         )
 
+    def _add_separate_view(blueprint, pid_type, relation_type, view_class):
+        endpoints = app.config.get("RECORDS_REST_ENDPOINTS", [])
+        options = endpoints.get(pid_type, {})
+        default_media_type = options.get("default_media_type", "")
+        rec_serializers = options.get("record_serializers", {})
+        serializers = {
+            mime: obj_or_import_string(func)
+            for mime, func in rec_serializers.items()
+        }
+
+        view_func = view_class.as_view(
+            view_class.view_name.format(pid_type),
+            serializers=serializers,
+            default_media_type=default_media_type,
+            ctx=dict(loader=relations_sequence_loader),
+        )
+
+        blueprint.add_url_rule(
+            "{0}/relations/{1}".format(options["item_route"], relation_type),
+            view_func=view_func,
+            methods=["POST", "DELETE"],
+        )
+
     bp = Blueprint("invenio_app_ils_relations", __name__, url_prefix="")
 
     _add_resource_view(bp, DOCUMENT_PID_TYPE, RecordRelationsResource)
     _add_resource_view(bp, SERIES_PID_TYPE, RecordRelationsResource)
+
+    _add_separate_view(
+        bp, SERIES_PID_TYPE, 'sequence', RelationSequenceResource
+    )
 
     return bp
 
@@ -419,40 +446,9 @@ class RecordRelationsResource(ContentNegotiatedMethodView):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ NEW VIEWS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-def create_relations_sequence_blueprint(app):
-    """Create relations sequence blueprint."""
-    # NOTE: Relation Sequence is only available for Series
-    blueprint = Blueprint(
-        "invenio_app_ils_relations_sequence",
-        __name__,
-        url_prefix=""
-    )
-
-    endpoints = app.config.get("RECORDS_REST_ENDPOINTS", [])
-    options = endpoints.get(SERIES_PID_TYPE, {})
-    default_media_type = options.get("default_media_type", "")
-    rec_serializers = options.get("record_serializers", {})
-    serializers = {
-        mime: obj_or_import_string(func)
-        for mime, func in rec_serializers.items()
-    }
-
-    blueprint.add_url_rule(
-        "{0}/relations/sequence".format(options["item_route"]),
-        view_func=RelationSequenceResource.as_view(
-            RelationSequenceResource.view_name,
-            serializers=serializers,
-            default_media_type=default_media_type,
-            ctx=dict(loader=relations_sequence_loader),
-        ),
-        methods=["POST", "DELETE"],
-    )
-    return blueprint
-
-
 class RelationSequenceResource(ContentNegotiatedMethodView):
     """Relation Sequence views for a record."""
-    view_name = "{}_relations_sequence"
+    view_name = "{}_sequence"
 
     def _validate_relation(self, record, payload):
         """Validate the payload when creating a new sequence relation."""

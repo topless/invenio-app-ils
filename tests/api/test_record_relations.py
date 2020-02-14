@@ -20,7 +20,8 @@ from invenio_app_ils.documents.api import Document
 TYPES_ENDPOINTS = {
     "relation": {
         "docid": "invenio_app_ils_relations.docid_relations",
-        "serid": "invenio_app_ils_relations.serid_relations",
+        # "serid": "invenio_app_ils_relations.serid_relations",
+        "serid": "invenio_app_ils_relations.serid_sequence",
     },
     "get": {
         "docid": "invenio_records_rest.docid_item",
@@ -1125,14 +1126,12 @@ def _test_sequence(client, json_headers):
     next_pid_type = "serid"
     previous_pid = "serid-1"
     previous_pid_type = "serid"
-    relation_type = "sequence"
 
     payload = {
         "next_pid": next_pid,
         "next_pid_type": next_pid_type,
         "previous_pid": previous_pid,
         "previous_pid_type": previous_pid_type,
-        "relation_type": relation_type,
     }
 
     def _test_create_sequence(create_using_pid1=True):
@@ -1154,7 +1153,6 @@ def _test_sequence(client, json_headers):
                             "pid": previous_pid,
                             "pid_type": previous_pid_type,
                             "title": previous_rec["title"],
-                            "relation_type": "sequence",
                         }
                     ]
                 },
