@@ -11,6 +11,7 @@ import {
 } from '@forms';
 import * as Yup from 'yup';
 import { FrontSiteRoutes } from '@routes/urls';
+import { ILSParagraphPlaceholder } from '@components/ILSParagraphPlaceholder';
 import { documentRequest as documentRequestApi } from '@api';
 import { goTo } from '@history';
 
@@ -26,6 +27,8 @@ const RequestSchema = Yup.object().shape({
 });
 
 export default class DocumentRequestForm extends Component {
+  state = { isFormLoading: false };
+
   constructor(props) {
     super(props);
     this.state = {
@@ -42,7 +45,13 @@ export default class DocumentRequestForm extends Component {
     };
   };
 
-  onSubmitSuccess = () => {
+  onCreateApiMethod = data => {
+    this.setState({ isFormLoading: true });
+    return documentRequestApi.create(data);
+  };
+
+  onSubmitSuccess = resp => {
+    this.setState({ isFormLoading: false });
     goTo(FrontSiteRoutes.patronProfile);
   };
 
@@ -54,7 +63,7 @@ export default class DocumentRequestForm extends Component {
         submitSerializer={this.onSerializeSubmit}
         successCallback={this.onSubmitSuccess}
         successSubmitMessage="Your book request has been sent to the library."
-        createApiMethod={documentRequestApi.create}
+        createApiMethod={this.onCreateApiMethod}
       >
         <StringField
           fieldPath="title"
@@ -129,7 +138,9 @@ export default class DocumentRequestForm extends Component {
           You can see all your book requests on your{' '}
           <Link to={FrontSiteRoutes.patronProfile}>profile</Link> page.
         </p>
-        <Segment>{this.renderForm()}</Segment>
+        <ILSParagraphPlaceholder isLoading={this.state.isFormLoading} lines={5}>
+          <Segment>{this.renderForm()}</Segment>
+        </ILSParagraphPlaceholder>
       </Container>
     );
   }
