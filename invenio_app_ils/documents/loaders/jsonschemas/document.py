@@ -7,6 +7,7 @@
 
 """Document schema for marshmallow loader."""
 
+from flask import current_app
 from invenio_records_rest.schemas import RecordMetadataSchemaJSONV1
 from marshmallow import EXCLUDE, Schema, fields, pre_load
 
@@ -204,6 +205,7 @@ class DocumentSchemaV1(RecordMetadataSchemaJSONV1):
     curated = fields.Bool()
     document_type = fields.Str()
     edition = fields.Str()
+    extra_data = fields.Method('dump_extra_data', 'load_extra_data')
     identifiers = fields.List(fields.Nested(IdentifierSchema))
     imprint = fields.Nested(ImprintSchema)
     internal_notes = fields.List(fields.Nested(InternalNoteSchema))
@@ -231,3 +233,17 @@ class DocumentSchemaV1(RecordMetadataSchemaJSONV1):
         data.update(set_changed_by(data, record))
         data.update(preserve_cover_metadata(data, record))
         return data
+
+    def dump_extra_data(self, obj):
+        """Dumps the extra_data value.
+        :params obj: content of the object's 'extra_data' field
+        """
+        ExtensionSchema = current_app.metadata_extra_data.to_schema()
+        return ExtensionSchema().dump(obj)
+
+    def load_extra_data(self, value):
+        """Loads the 'extra_data' field.
+        :params value: content of the input's 'extra_data' field
+        """
+        ExtensionSchema = current_app.metadata_extra_data.to_schema()
+        return ExtensionSchema().load(value)

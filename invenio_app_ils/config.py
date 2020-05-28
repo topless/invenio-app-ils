@@ -24,10 +24,12 @@ from invenio_app.config import APP_DEFAULT_SECURE_HEADERS
 from invenio_oauthclient.contrib import cern
 from invenio_pidrelations.config import RelationType
 from invenio_records_rest.facets import terms_filter
+from invenio_records_rest.schemas.fields import DateString, SanitizedUnicode
 from invenio_records_rest.utils import allow_all, deny_all
 from invenio_stats.aggregations import StatAggregator
 from invenio_stats.processors import EventsIndexer
 from invenio_stats.queries import ESTermsQuery
+from marshmallow import fields
 
 from invenio_app_ils.document_requests.indexer import DocumentRequestIndexer
 from invenio_app_ils.documents.indexer import DocumentIndexer
@@ -1101,3 +1103,18 @@ ILS_DEFAULT_LOCATION_PID = "1"
 
 ILS_LITERATURE_COVER_URLS_BUILDER = build_ils_demo_cover_urls
 """Default implementation for building cover urls in document serializer."""
+
+ILS_EXTRA_DATA = {
+    "document": {
+        "experiment": {
+            "accelerator": {
+                "elasticsearch": "keyword",
+                "marshmallow": SanitizedUnicode()
+            },
+            "curated_relation": {
+                "elasticsearch": "boolean",
+                "marshmallow": fields.Bool()
+            },
+        },
+    }
+}

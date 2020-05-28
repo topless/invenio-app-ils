@@ -21,6 +21,7 @@ from .circulation.receivers import register_circulation_signals
 from .document_requests.api import DOCUMENT_REQUEST_PID_TYPE
 from .documents.api import DOCUMENT_PID_TYPE
 from .files.receivers import register_files_signals
+from .metadata_extra_data import MetadataExtraData
 from .pidstore.pids import EITEM_PID_TYPE, INTERNAL_LOCATION_PID_TYPE, \
     ITEM_PID_TYPE, LOCATION_PID_TYPE, PATRON_PID_TYPE, SERIES_PID_TYPE
 
@@ -174,6 +175,9 @@ class InvenioAppIls(object):
     def init_app(self, app):
         """Flask application initialization."""
         self.update_config_records_rest(app)
+        self.metadata_extra_data = MetadataExtraData(
+            app.config["ILS_EXTRA_DATA"]
+        )
         app.extensions["invenio-app-ils"] = _InvenioAppIlsState(app)
         app.register_blueprint(
             Blueprint(

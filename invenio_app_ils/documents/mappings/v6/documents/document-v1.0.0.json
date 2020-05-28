@@ -128,6 +128,46 @@
           },
           "type": "object"
         },
+        "extra_data": {
+          "type": "object",
+          "dynamic": false,
+          "enabled": false
+        },
+        "extra_data_keywords": {
+          "type": "object",
+          "properties": {
+            "key": {"type": "keyword"},
+            "value": {"type": "keyword"}
+          }
+        },
+        "extra_data_texts": {
+          "type": "object",
+          "properties": {
+            "key": {"type": "keyword"},
+            "value": {"type": "text"}
+          }
+        },
+        "extra_data_longs": {
+          "type": "object",
+          "properties": {
+            "key": {"type": "keyword"},
+            "value": {"type": "long"}
+          }
+        },
+        "extra_data_dates": {
+          "type": "object",
+          "properties": {
+            "key": {"type": "keyword"},
+            "value": {"type": "date"}
+          }
+        },
+        "extra_data_booleans": {
+          "type": "object",
+          "properties": {
+            "key": {"type": "keyword"},
+            "value": {"type": "boolean"}
+          }
+        },
         "items": {
           "properties": {
             "hits": {
