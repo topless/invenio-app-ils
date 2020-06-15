@@ -1035,7 +1035,67 @@ ILS_LITERATURE_COVER_URLS_BUILDER = build_ils_demo_cover_urls
 """Default implementation for building cover urls in document serializer."""
 
 # Namespaces for fields added to the metadata schema
-ILS_RECORDS_METADATA_NAMESPACES = {}
+ILS_RECORDS_METADATA_NAMESPACES = {
+    "series": {
+        "accelerator_experiments": {
+            "@context": "https://inveniosoftware.org/accelerator_experiments/terms"
+        },
+        "standard_CERN_status": {
+            "@context": "https://inveniosoftware.org/standard_CERN_status/terms"
+        },
+    }
+}
 
 # Fields added to the metadata schema.
-ILS_RECORDS_METADATA_EXTENSIONS = {}
+ILS_RECORDS_METADATA_EXTENSIONS = {
+    "series": {
+        "accelerator_experiments:accelerator": {
+            "elasticsearch": "keyword",
+            "marshmallow": SanitizedUnicode()
+        },
+        "accelerator_experiments:curated_relation": {
+            "elasticsearch": "boolean",
+            "marshmallow": Bool()
+        },
+        "accelerator_experiments:experiment": {
+            "elasticsearch": "keyword",
+            "marshmallow": SanitizedUnicode()
+        },
+        "accelerator_experiments:institution": {
+            "elasticsearch": "keyword",
+            "marshmallow": SanitizedUnicode()
+        },
+        "accelerator_experiments:legacy_name": {
+            "elasticsearch": "keyword",
+            "marshmallow": SanitizedUnicode()
+        },
+        "accelerator_experiments:project": {
+            "elasticsearch": "keyword",
+            "marshmallow": SanitizedUnicode()
+        },
+        "accelerator_experiments:study": {
+            "elasticsearch": "keyword",
+            "marshmallow": SanitizedUnicode()
+        },
+        "standard_CERN_status:CERN_applicability": {
+            "elasticsearch": "keyword",
+            "marshmallow": SanitizedUnicode()
+        },
+        "standard_CERN_status:standard_validity": {
+            "elasticsearch": "keyword",
+            "marshmallow": SanitizedUnicode(required=True)
+        },
+        "standard_CERN_status:checkdate": {
+            "elasticsearch": "date",
+            "marshmallow": SanitizedUnicode()
+        },
+        "standard_CERN_status:comment": {
+            "elasticsearch": "text",
+            "marshmallow": SanitizedUnicode()
+        },
+        "standard_CERN_status:expert": {
+            "elasticsearch": "keyword",
+            "marshmallow": SanitizedUnicode()
+        },
+    }
+}

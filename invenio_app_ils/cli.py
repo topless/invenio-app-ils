@@ -17,7 +17,6 @@ from random import randint
 import arrow
 import click
 import lorem
-import pkg_resources
 from flask import current_app
 from flask.cli import with_appcontext
 from invenio_accounts.models import User
@@ -643,6 +642,26 @@ class SeriesGenerator(Generator):
                 "cover_metadata": {
                     "ISBN": random.choice(DocumentGenerator.ISBNS),
                     "urls": {},
+                },
+                "extensions": {
+                    "accelerator_experiments:accelerator": random.choice(["LHCb", "ATLAS", "Linear"]),
+                    "accelerator_experiments:institution": random.choice(["Auth", "Kepler", "Bohr"]),
+                    "accelerator_experiments:project": random.choice([
+                        "Myon energy detection",
+                        "Chaos projection",
+                        "Cosmic radiation",
+                    ]),
+                    "standard_CERN_status:CERN_applicability": random.choice([
+                        "applicable",
+                        "no yet applicable",
+                        "no longer applicable",
+                    ]),
+                    "standard_CERN_status:standard_validity": random.choice([
+                        "published",
+                        "withdrawn",
+                        "under development",
+                        "not yet published",
+                    ])
                 },
                 "mode_of_issuance": moi,
                 "title": lorem.sentence(),
